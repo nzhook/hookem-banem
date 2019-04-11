@@ -35,3 +35,10 @@ This is the harder part of the setup as each server/client could be different de
 - Optional: Modify the commands needed to add the blocks for this server (default uses iptables)
 - Set it to start on boot using your normal method (systemd, sysvinit...)
 - Start the client and you should see it start to block requests as hookem-server detects and sends them
+
+
+**NOTE** hookem-server will only know about activity sent to the server it is monitoring, so each server running the client should send syslog messages to the master. You can normally do this by adding the following line to the syslog.conf (or rsyslog.conf):
+```
+*.* @your.syslog-server
+```
+(one @ uses UDP which is normally fine)
