@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# hookem-banem-client        Startup script for hookem-banem-client.
+#
+# chkconfig: 2345 55 25
+# description: Client daemon for Hookem-Banem distrubted blocking system
+### BEGIN INIT INFO
+# Provides:          hookem-banem-client
+# Required-Start:    $local_fs $network
+# Required-Stop:     $local_fs
+# Should-Start:      $time $syslog iptables firehol shorewall ipmasq arno-iptables-firewall
+# Should-Stop:       $syslog iptables firehol shorewall ipmasq arno-iptables-firewall
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Client daemon for Hookem-Banem
+# Description:       Hookem-Banem client daemon for talking with its server to ban potential attackers.
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+prog=hookem-client
+exec=/usr/local/bin/hookem-client.pl
+
+# Source config
+if [ -f /etc/sysconfig/$prog ] ; then
+    . /etc/sysconfig/$prog
+fi
+
+start() {
+	[ -x $exec ] || exit 5
+
+	umask 077
+
+        echo -n $"Starting hookem-banem-client: "
+	$exec && success || failure
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+stop() {
+        echo -n $"Shutting hookem-banem-client: "
+        killproc $prog
+        RETVAL=$?
+        echo
+        return $RETVAL
+}
+rhstatus() {
+        status -p "$PIDFILE" -l $prog $exec
+}
+restart() {
+        stop
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  reload)
+        exit 3
+        ;;
+  force-reload)
+        restart
+        ;;
+  status)
+        rhstatus
+        ;;
+  condrestart|try-restart)
+        rhstatus >/dev/null 2>&1 || exit 0
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
+        exit 3
+esac
+
+exit $?

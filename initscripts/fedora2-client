@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# hookem-banem-client        Starts detection client
+#
+#
+# chkconfig: 2345 30 99
+# description: Blah
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+[ -f /usr/local/bin/hookem-client.pl ] || exit 0
+
+RETVAL=0 
+
+# virtualhosting
+# See how we were called.
+case "$1" in
+  start)
+	echo -n "Starting hookem-banem-client: "
+	/usr/local/bin/hookem-client.pl
+	echo
+	;;
+  stop)
+	echo -n "Shutting down hookem-banem-client: "
+	killproc hookem-client
+	echo
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  *)
+	echo "Usage: syslog {start|stop|restart}"
+	exit 1
+esac
+
+exit $RETVAL
+
