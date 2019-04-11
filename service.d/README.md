@@ -41,12 +41,12 @@ a longer block.
 Note this is number of blocks not number of hits, so they would get Attempts * Long Attempts before
 we do a long block
 
-## Long Block Timeout
+### Long Block Timeout
 
 How long to remember the attacker for after that initial block occured, if further blocks occur during
 this time then they may be coinsidered for a long block
 
-## Long Block Expire
+### Long Block Expire
 
 Much like Block Expire but for a long block. This should be for a much longer period (they continue to annoy
 us so lets ignore them for longer)
@@ -54,18 +54,18 @@ us so lets ignore them for longer)
 Note, if the long block expires before the long block time out the next block will be another long block
 
 
-## Filters
+### Filters
 
 What regex rules should be used to determine attackers? This should reference the name of a file in the 
 filter.d directory without the extension which contains *failregex* line(s).
 
-## IP Detection
+### IP Detection
 
 What regex rules should be used to enter the filtering rules? This should reference the name of a file in the 
 filter.d directory without the extension which contains *ipregex* line(s).
 
 
-## Syslog
+### Syslog
 
 When a block is done make an additional log entry to this service in syslog. eg. if blocking an IP which is showing
 up in the mail logs you may want to make a log entry in the mail logs showing that IP has been blocked so that
