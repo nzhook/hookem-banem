@@ -4,6 +4,8 @@ Monitors logs on a centralised server and distributes the block requests accross
 Supports:
  - IPv6 
  - Subnet blocking
+ - Longer blocks for repeat attackers
+
 
 Original inspiration taken from Fail2ban https://www.fail2ban.org (but written in perl)
 
