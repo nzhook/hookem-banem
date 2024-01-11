@@ -166,27 +166,28 @@ sub sig_closedown {
 
 	if(%blocks) {
 		foreach my $service(keys %blocks) {
-			my %vars = (
-				"service" => $service,
-				"protocol" => $services{$service}{"protocol"},
-				"port" => $services{$service}{"port"},
-			);
+			# We dont know if the block was on v4 or v6 so we do both
+			# FIXME
+			foreach my $ipv ((4, 6)) {
+				next if(! defined($services{$ipv . "-" . $service}));
+				my %vars = (
+					"service" => $service,
+					"protocol" => $services{$ipv . "-" . $service}{"protocol"},
+					"port" => $services{$ipv . "-" . $service}{"port"},
+				);
 
-			# TODO Need to handle this more dynamically
-			godo("mass_unblock", 6, 0, %vars);
-			if(godo("mass_unblock", 4, 0, %vars)) {
-				delete @blocks{$service};				# Should all be gone now
-			} else {
-				warn "Unblocking IPs for $service\n";
-				foreach my $ip (keys %{ $blocks{$service} }) {
-					unblock_ip($service, $ip, "localshutdown");
-					delete $blocks{$service}{$ip};			# Be nice to memory
+				if(godo("mass_unblock", $ipv, 0, %vars)) {
+					delete @blocks{$service};				# Should all be gone now
+				} else {
+					warn "Unblocking IPs for $service\n";
+					foreach my $ip (keys %{ $blocks{$service} }) {
+						unblock_ip($service, $ip, "localshutdown");
+						delete $blocks{$service}{$ip};			# Be nice to memory
+					}
 				}
-			}
 
-			# TODO Need to handle this more dynamically
-			godo("end_service", 6, 0, %vars);
-			godo("end_service", 4, 0, %vars);
+				godo("end_service", $ipv, 0, %vars);
+			}
 		}
 	}
         unlink($pidfile) or die("Could not delete $pidfile: $!");
