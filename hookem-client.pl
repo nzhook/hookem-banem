@@ -244,7 +244,7 @@ sub cache_blocked {
 
 	# TODO: This needs to be more dynamic. For now we do two runs one for ipv4 and one for ipv6
 	if($commands{4}{"cache_block"}) {
-		my $cmd = $commands{"cache_block"};
+		my $cmd = $commands{4}{"cache_block"};
 		my ($k, $v);
 		foreach $k (keys %{ \%vars }) {
 			$v = $vars{$k};
@@ -290,12 +290,12 @@ sub cache_blocked {
 sub is_blocked {
 	my %vars = @_;
 
-	if($commands{"cache_block"} && $commands{"grep_block"}) {
+	if($commands{$vars{"ipv"}}{"cache_block"} && $commands{$vars{"ipv"}}{"grep_block"}) {
 		if(! defined($cache{$vars{"service"}}{"block"}) || time() - $cache{$vars{"service"}}{"lastblocktime"} >= $cacherefresh) {
 			cache_blocked(%vars);
 		}
 
-		my $cmd = $commands{"grep_block"};
+		my $cmd = $commands{$vars{"ipv"}}{"grep_block"};
 		my ($k, $v);
 		foreach $k (keys %{ \%vars }) {
 			$v = $vars{$k};
@@ -309,7 +309,7 @@ sub is_blocked {
 		return 0;		# If cache is defined and we get here then assume its not blocked
 	}
 
-	return 0 if(! $commands{"check_block"});
+	return 0 if(! $commands{$vars{"ipv"}}{"check_block"});
 
 	if(godo("check_block", $vars{"ipv"}, 1, %vars)) {
 		return 1;
