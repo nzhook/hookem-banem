@@ -62,40 +62,33 @@ our $cacherefresh = 600;
 # The commands to execute:
 our %commands = {};
 
-# The basic command prefix (eg. sudo iptables)
-#   This is here to make the %commands easier, its not used anywhere else
-#	my $base4cmd = "sudo /sbin/iptables";
-my $base4cmd = "/sbin/iptables";
-my $base6cmd = "/sbin/ip6tables";
-
 # The commands to execute:
 my %commands4 = (
-	"new_service" 	=> $base4cmd . ' -N hookem-INP<service>; ' . $base4cmd . ' -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -j hookem-INP<service>',
-	"check_service"	=> $base4cmd . ' -nL INPUT | grep -qi "hookem-INP<service>.*state NEW multiport dports <port>"',				# Note: We do an -n here, so we expect the ports to come in as their numeric form. (we dint check this everytime, so there is no cache version)
-	"end_service" 	=> $base4cmd . ' -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j hookem-INP<service> && ' . $base4cmd . ' -X hookem-INP<service>',
+	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v4 hash:net family inet4; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v4 src -j DROP',
+	"check_service"	=> '/sbin/iptables -nL INPUT | grep -qi "hookem-INP<service>_v4"',
+	"end_service" 	=> '/sbin/iptables -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j DROP -m set --match-set hookem-INP<service>_v4; /sbin/ipset destroy hookem-INP<service>_v4',
 
-	"new_block" 	=> $base4cmd . ' -I hookem-INP<service> 1 -j DROP -s <ip>',
-#	"check_block" 	=> $base4cmd . ' -nL hookem-INP<service> | grep -q "<ip>"',
+	"new_block" 	=> '/sbin/ipset add hookem-INP<service>_v4 <ip>',
 	"check_block" 	=> undef,
-	"cache_block" 	=> $base4cmd . ' -nL hookem-INP<service>',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"cache_block" 	=> '/sbin/ipset list hookem-INP<service>_v4',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
 	"grep_block" 	=> '<ip>',
-	"end_block" 	=> $base4cmd . ' -D hookem-INP<service> -j DROP -s <ip>',
-	"mass_unblock"	=> $base4cmd . ' -F hookem-INP<service>',
+	"end_block" 	=> '/sbin/ipset del hookem-INP<service>_v4 <ip>',
+	"mass_unblock"	=> '/sbin/ipset flush hookem-INP<service>_v4',
 );
 $commands{4} = \%commands4;
 
-my %commands6 = (
-	"new_service" 	=> $base6cmd . ' -N hookem-INP<service>; ' . $base6cmd . ' -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -j hookem-INP<service>',
-	"check_service"	=> $base6cmd . ' -nL INPUT | grep -qi "hookem-INP<service>.*state NEW multiport dports <port>"',				# Note: We do an -n here, so we expect the ports to come in as their numeric form. (we dint check this everytime, so there is no cache version)
-	"end_service" 	=> $base6cmd . ' -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j hookem-INP<service> && ' . $base6cmd . ' -X hookem-INP<service>',
 
-	"new_block" 	=> $base6cmd . ' -I hookem-INP<service> 1 -j DROP -s <ip>',
-#	"check_block" 	=> $base6cmd . ' -nL hookem-INP<service> | grep -q "<ip>"',
+my %commands6 = (
+	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v6 hash:net family inet4; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v6 src -j DROP',
+	"check_service"	=> '/sbin/iptables -nL INPUT | grep -qi "hookem-INP<service>_v6"',
+	"end_service" 	=> '/sbin/iptables -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j DROP -m set --match-set hookem-INP<service>_v6; /sbin/ipset destroy hookem-INP<service>_v6',
+
+	"new_block" 	=> '/sbin/ipset add hookem-INP<service>_v6 <ip>',
 	"check_block" 	=> undef,
-	"cache_block" 	=> $base6cmd . ' -nL hookem-INP<service>',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"cache_block" 	=> '/sbin/ipset list hookem-INP<service>_v6',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
 	"grep_block" 	=> '<ip>',
-	"end_block" 	=> $base6cmd . ' -D hookem-INP<service> -j DROP -s <ip>',
-	"mass_unblock"	=> $base6cmd . ' -F hookem-INP<service>',
+	"end_block" 	=> '/sbin/ipset del hookem-INP<service>_v6 <ip>',
+	"mass_unblock"	=> '/sbin/ipset flush hookem-INP<service>_v6',
 );
 $commands{6} = \%commands6;
 
