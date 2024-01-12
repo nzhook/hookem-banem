@@ -70,7 +70,8 @@ my %commands4 = (
 
 	"new_block" 	=> '/sbin/ipset add hookem-INP<service>_v4 <ip>',
 	"check_block" 	=> undef,
-	"cache_block" 	=> '/sbin/ipset list hookem-INP<service>_v4',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"cache_block" 	=> '/sbin/ipset list -o save hookem-INP<service>_v4',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"parse_block"   => qw(add\s.*_v4\s*([0-9a-f:.]+)),
 	"grep_block" 	=> '<ip>',
 	"end_block" 	=> '/sbin/ipset del hookem-INP<service>_v4 <ip>',
 	"mass_unblock"	=> '/sbin/ipset flush hookem-INP<service>_v4',
@@ -85,7 +86,8 @@ my %commands6 = (
 
 	"new_block" 	=> '/sbin/ipset add hookem-INP<service>_v6 <ip>',
 	"check_block" 	=> undef,
-	"cache_block" 	=> '/sbin/ipset list hookem-INP<service>_v6',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"cache_block" 	=> '/sbin/ipset list -o save hookem-INP<service>_v6',					# Remember should return everything for that block, only refreshes every $cacherefresh seconds
+	"parse_block"   => qw(add\s.*_v6\s*([0-9a-f:.]+)),
 	"grep_block" 	=> '<ip>',
 	"end_block" 	=> '/sbin/ipset del hookem-INP<service>_v6 <ip>',
 	"mass_unblock"	=> '/sbin/ipset flush hookem-INP<service>_v6',
@@ -251,9 +253,18 @@ sub cache_blocked {
 		}
 
 		warn $cmd . "\n" if(! $runasdaemon);
+		my $parseregex = $commands{4}{"parse_block"};
+
 		open(CMDPIPE, "-|", $cmd) or return 0;
 		while(<CMDPIPE>) {
-			$cache{$vars{"service"}}{"block"} .= $_;
+			if(/$parseregex/) {
+				# If we dont have it, add it so we can auto-expire it
+				warn("Detected new rule for " . $1 . " that I did not add - tracking\n") if(! defined $blocks{$vars{"service"}}{$1});
+				$blocks{$vars{"service"}}{$1} = {"ports" => "", "protocol" => "", "type" => "", "lasttime" => time(), "expires" => time() + $maxexpire} if(! defined $blocks{$vars{"service"}}{$1});
+				$cache{$vars{"service"}}{"block"} .= $1 . "\n";
+			} else {
+				$cache{$vars{"service"}}{"block"} .= $_ . "\n";
+			}
 		}
 		close(CMDPIPE);
 	}
@@ -268,9 +279,18 @@ sub cache_blocked {
 	
 		$cache{$vars{"service"}}{"block"} = "";
 		warn $cmd . "\n" if(! $runasdaemon);
+		my $parseregex = $commands{6}{"parse_block"};
+
 		open(CMDPIPE, "-|", $cmd) or return 0;
 		while(<CMDPIPE>) {
-			$cache{$vars{"service"}}{"block"} .= $_;
+			if(/$parseregex/) {
+				# If we dont have it, add it so we can auto-expire it
+				warn("Detected new rule for " . $1 . " that I did not add - tracking\n") if(! defined $blocks{$vars{"service"}}{$1});
+				$blocks{$vars{"service"}}{$1} = {"ports" => "", "protocol" => "", "type" => "", "lasttime" => time(), "expires" => time() + $maxexpire} if(! defined $blocks{$vars{"service"}}{$1});
+				$cache{$vars{"service"}}{"block"} .= $1 . "\n";
+			} else {
+				$cache{$vars{"service"}}{"block"} .= $_ . "\n";
+			}
 		}
 		close(CMDPIPE);
 	}
