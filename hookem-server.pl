@@ -35,46 +35,71 @@ use Sys::Syslog qw(:DEFAULT setlogsock);  # default set, plus setlogsock
 #   - For $havebigsubnetscounter, have two modes... Dont block just analyse, then block on alarm, OR Just block, analyse on alarm - both have their advantages
 #   - Specify the IP(s) to send requests over
 
+# The directory name that will contain the config files
+#  Directory structure:
+#	$basepth/conf.d/*.conf		Any settings to override (anything with our below can be overridden here)
+#	$basepth/filter.d/*.conf	The files containing regexes to match on (log and ip regexes)
+#	$basepth/service.d/*.conf	The files containing settings for each service (the ports and which filter files to use)
+my $basepth = "/usr/local/etc/hookem-banem/";
+
+
 # Debug level, the higher the value the more detail sent to the debug file
-my $debug = 2;
-my %filtercfg;
-my %ipfindcfg;
+our $debug = 2;
 
 # Sep  4 00:08:45 trible rpc.mountd[2167]: libnss-mysql: Connection ...
-my $log_format = '^(?P<datetime>[a-zA-Z]{3} +[0-9]+ [0-9]+:[0-9]+:[0-9]+) (?P<server>[a-z0-9.]+) (?P<message>\S+: .*)';
+our $log_format = '^(?P<datetime>[a-zA-Z]{3} +[0-9]+ [0-9]+:[0-9]+:[0-9]+) (?P<server>[a-z0-9.]+) (?P<message>\S+: .*)';
 # Sep  6 00:24:17
-my $log_dateformat = '^(?P<month>[a-zA-Z]{3}) +(?P<day>[0-9]+) (?P<hour>[0-9]+):(?P<minute>[0-9]+):(?P<second>[0-9]+)';
+our $log_dateformat = '^(?P<month>[a-zA-Z]{3}) +(?P<day>[0-9]+) (?P<hour>[0-9]+):(?P<minute>[0-9]+):(?P<second>[0-9]+)';
 
 # If the month shows up in this list it is replaced with the value (note: use Human, we convert to perl)
-my %log_datemonths = ( "Jan" => 1, "Feb" => 2, "Mar" => 3, "Apr" => 4, "May" => 5, "Jun" => 6, "Jul" => 7, "Aug" => 8, "Sep" => 9, "Oct" => 10, "Nov" => 11, "Dec" => 12 );
+our %log_datemonths = ( "Jan" => 1, "Feb" => 2, "Mar" => 3, "Apr" => 4, "May" => 5, "Jun" => 6, "Jul" => 7, "Aug" => 8, "Sep" => 9, "Oct" => 10, "Nov" => 11, "Dec" => 12 );
 
-my $warmtime = 3;			# Wait this many seconds before doing any bans (eg. allow time to catch up) - NOTE: This will still assume an IP has been banned
-my $cooloff  = 2;			# Wait this many seconds after a ban before attempting it again
-my $bport = 2008;			# The UDP port the clients listen on to receieve the broadcasted requests
-my @broadcast_ips = ( "255.255.255.255", "210.48.255.255" );	# The IPs to broadcast to (will send to each in the array)
-my $checksumsalt = "AnyOn3H3re2L!st3n";	# The salt which checksums will be made with (must be the same on each client)
+our $warmtime = 3;			# Wait this many seconds before doing any bans (eg. allow time to catch up) - NOTE: This will still assume an IP has been banned
+our $cooloff  = 2;			# Wait this many seconds after a ban before attempting it again
+our $bport = 2008;			# The UDP port the clients listen on to receieve the broadcasted requests
+our @broadcast_ips = ( "255.255.255.255", "210.48.255.255" );	# The IPs to broadcast to (will send to each in the array)
+our $checksumsalt = "AnyOn3H3re2L!st3n";	# The salt which checksums will be made with (must be the same on each client)
 #my $firstsubnetsize = 3;		# When working out subnets to block, ignore the last X values (eg. 3 would a /29)
 #my $firstsubnetallow = 4;		# Based on $firstsubnetsize, how many of the subnets should trigger a whole subnet ban (4 here would = 50% of a /29 prefix as each 3 bits is 8 prefixes)
-my $firstsubnetsize = 4;		# When working out subnets to block, ignore the last X values (eg. 3 would a /29)
-my $firstsubnetallow = int(2 ** $firstsubnetsize * 0.25);		# Based on $firstsubnetsize, how many of the subnets should trigger a whole subnet ban (4 here would = 50% of a /29 prefix as each 3 bits is 8 prefixes)
+our $firstsubnetsize = 4;		# When working out subnets to block, ignore the last X values (eg. 3 would a /29)
+our $firstsubnetallow = int(2 ** $firstsubnetsize * 0.25);		# Based on $firstsubnetsize, how many of the subnets should trigger a whole subnet ban (4 here would = 50% of a /29 prefix as each 3 bits is 8 prefixes)
 
-my $doserverfirst = 0;			# When an attack starts, setting this to 1 will send the first block request only to the server being hit (the next block will be done via broadcast)
+our $doserverfirst = 0;			# When an attack starts, setting this to 1 will send the first block request only to the server being hit (the next block will be done via broadcast)
 
 # @TODO need to find an example of this (or our value in the syslog-ng config)
 #my $log_format = '^(?P<facility>[a-z]*)\.(?P<priority>[a-z]*) (?P<datetime>[a-zA-Z]{3} +[0-9]* [0-9]*:[0-9]*:[0-9]*) (?P<server>[a-z0-9.]+) (?P<message>\S+: .*)';
 
-my @ignoreips = ("210.48.108.1");	# Array of IPs to ignore (office, load balancers, jumphosts...)
+our @ignoreips = ("127.2.1.1");		# Array of IPs to ignore (office, load balancers, jumphosts...)
 
-my $basepth = "/usr/local/etc/hookem-banem/";
+our $debuglog = "/var/log/hookem-banem.log";
+our $statlog = "/var/log/hookem-banem.info";
 
-my $debuglog = "/var/log/hookem-banem.log";
-my $statlog = "/var/log/hookem-banem.info";
+#
+# Default configuration ends
+#
 
+# Read any overrides from files
+my %filtercfg;
+my %ipfindcfg;
 my %cfg;
+
+# Read in the basic settings
+sub loadbaseconfig {
+	return if(! -d $basepth . "/conf.d");
+	opendir(my $dh, $basepth . "/conf.d") || die("Can't read files in " . $basepth . "/conf.d: $!");
+	while(readdir($dh)) {
+		next if(! /.conf$/);
+		next if(! -f $basepth . "/conf.d/" . $_);
+		do $basepth . "/conf.d/" . $_;
+	}
+	closedir($dh);
+}
+
+# Read in the filters and services
 sub reloadconfig {
-	$filtercfg = {};
-	$ipfindcfg = {};
-	%cfg = {};
+	%filtercfg = ();
+	%ipfindcfg = ();
+	%cfg = ();
 
 	my $dh;
 	# Read the filters first
@@ -83,7 +108,7 @@ sub reloadconfig {
 		next if(! -f $basepth . "filter.d/" . $_);
 		next if(! /.conf$/);
 
-		printf(DEBUGOUT " >> Rading filter config %s\n", $_) if(defined $debug && $debug > 3);
+		printf(DEBUGOUT " >> Reading filter config %s\n", $_) if(defined $debug && $debug > 3);
 		read_filter_config($basepth . "filter.d/" . $_);
 	}
 	closedir $dh;
@@ -101,11 +126,12 @@ sub reloadconfig {
 	closedir $dh;
 }
 
-#
-# Configuration ends
-#
+# Read in the overrides from a config file
+#  some of these (like debugfile) can only be set on start
+#  others can be reloaded at runtime
+loadbaseconfig();
 
-# Dont buffer the output
+# Open the debugfile and dont buffer the output
 $| = 1 if(defined $debug);
 if(defined $debug) {
 	open(DEBUGOUT, ">>", $debuglog);
@@ -116,6 +142,11 @@ if(defined $debug) {
 }
 
 reloadconfig();
+
+#
+# Configuration ends
+#
+
 
 
 # Global/Tracking or Config modification vars
@@ -668,6 +699,7 @@ printf(DEBUGOUT " -!!-> Receieved %s\n", $sig_name) if(defined $debug);
 
 	show_status() if(defined $debug);
 
+	loadbaseconfig();
 	reloadconfig();
 }
 

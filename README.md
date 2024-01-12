@@ -1,5 +1,5 @@
 # Hookem-banem
-Monitors logs on a centralised server and distributes the block requests accross multiple servers
+Monitors logs from a centralised server and issues a block accross all connected servers
 
 Supports:
  - IPv6 
@@ -11,10 +11,10 @@ Original inspiration taken from Fail2ban https://www.fail2ban.org (but written i
 
 
 ## Server Setup
-- Enable services to monitor by changing settings in the monitor.d directory (see monitor.d/EXAMPLE.conf for setting descriptions)
+- Enable services to monitor by changing settings in the service.d directory (see service.d/EXAMPLE.conf for setting descriptions)
 - You can add additional rulesets in the filter.d directory (see filter.d/EXAMPLE.conf for how these work)
-- Optional: Change @broadcast_ips, @ignoreips, $bport and $checksumsalt in hookem-server.pl to customise your environment
-- Send the centalised logs to stdin of hookem-server.pl, example for syslog-ng:
+- Optional: Create a file in the config.d directory to set @broadcast_ips, @ignoreips, $bport and $checksumsalt to customise your environment
+- Send the centralised logs to stdin of hookem-server.pl, example for syslog-ng:
 ```
 destination pg_hookem { 
         program("/usr/local/bin/hookem-server.pl"); 
@@ -29,18 +29,23 @@ log {
 
 
 ## Client setup
-This is the harder part of the setup as each server/client could be different depending on your environment
+The client is designed to run on any device that has a base install of perl, each device may have a different way of blocking
+access. By default this is done with ipset and iptables, but each command can be configured. See example_config/client_* for
+examples for iptables only or routing.
+
+To install:
+- Make sure the device sends logs back to the device running hookem-server, for rsyslog add this config entry:
+```
+*.* @The hookem-server IP
+```
+(keep the @ as this uses UDP)
 
 - Copy hookem-client.pl to the server/client 
-- **Modify the $myparent line to match the IP hookem-server sends from**
-- Optional: If you changed $bport and/or $checksumsalt you need to make the same change to each client
-- Optional: Modify the commands needed to add the blocks for this server (default uses iptables)
-- Set it to start on boot using your normal method (systemd, sysvinit...)
-- Start the client and you should see it start to block requests as hookem-server detects and sends them
-
-
-**NOTE** hookem-server will only know about activity sent to the server it is monitoring, so each server running the client should send syslog messages to the master. You can normally do this by adding the following line to the syslog.conf (or rsyslog.conf):
+- Create a file named hookem-client.pl.d/client.conf in the same directory as hookem-client.pl and add a line for 
 ```
-*.* @your.syslog-server
+$myparent="The hookem-server IP";
 ```
-(one @ uses UDP which is normally fine)
+- Optional: If you changed $bport and/or $checksumsalt on the server, add these to the file as well
+- Optional: If the device needs different commands, these can also be added (or copy one of the examples)
+- Set hookem-client.pl to start on boot using your normal method (systemd, sysvinit...)
+- Start the client, as hookem-server detects issues hookem-client should run the block commands
