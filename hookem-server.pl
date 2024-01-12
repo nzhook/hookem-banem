@@ -1026,7 +1026,7 @@ printf(DEBUGOUT "\t\t ---> have %-15s hitting %-10s on %-10s for id: $id, curren
 			my $nextpattern = @$pat[$where + 1];
 
 			foreach my $check (@$pattern) {
-				if($msg =~ /$check/ ) {
+				if($msg =~ /$check/i ) {
 					$whereami{$ip . "-" . $service . $id} = $where + 1;
 					$lastseen{$service}{$ip . "-" . $service . $id} = $thistime;
 printf(DEBUGOUT "\t\t\t ---> detected %-15s hitting %-10s on %-10s rule $id, pos: %i last: %s\n", $ip, $service, $server, $whereami{$ip . "-" . $service . $id}, $fullmessage) if(defined $debug && $debug > 2);
