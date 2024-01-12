@@ -124,7 +124,6 @@ if($errorstosyslog) {
 
 
 # Global/Tracking vars
-my $nextcheck = 0;			# Will force a clean up run straight away, but we then dont have to calculate it once we have the first timestamp
 my %blocks;
 my %services;
 my %cache;
@@ -144,7 +143,7 @@ sub clean_old {
 		}
 	}
 
-	$nextcheck = time() + 300;		# It should be rare that we need to clean expired IPs as the server should tell us
+	alarm(600);				# It should be rare that we need to clean expired IPs as the server should tell us
 }
 
 # What to do when we are sent a sigterm (15)
@@ -480,11 +479,11 @@ if($runasdaemon) {
 	close(STDIN);
 }
 
+$SIG{"ALRM"} = \&clean_old;
+alarm(10);			# Call the clean up as soon as possible and let it decide how often to run
+
 # The infinite loop
 while(1) {
-	# Check the lastseen queues every minute
-	clean_old() if(time() ge $nextcheck);
-
 	my $inbound = "";
 	my $peeraddr = recv(SERVER, $inbound, 256, 0);
 	if(! defined($inbound)) {
@@ -492,6 +491,7 @@ while(1) {
 		warn "Invalid recv from " . $peeraddr . ", ignored\n";
 		next 
 	}
+	next if(! $peeraddr);		# After an alarm the script continues, if we dont have a peer just return to the top
 
 	my($rport, $peerhost) = sockaddr_in($peeraddr);
 	$peerhost = inet_ntoa($peerhost);
