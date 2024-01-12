@@ -877,13 +877,13 @@ sub sendcmd {
 #			print DEBUGOUT "sending bip for $cmd to $bip\n";
 			socket(S, PF_INET, SOCK_DGRAM, getprotobyname('udp')) or die "socket: $!\n";
 			setsockopt(S, SOL_SOCKET, SO_BROADCAST, 1) or die "Could not setup a broadcast socket for $bip: $!\n";
-			defined(send(S, $cmd, 0, sockaddr_in($bport, inet_aton($bip)))) or print "could not send message to $bip: $!\n";
+			defined(send(S, $cmd, 0, sockaddr_in($bport, inet_aton($bip)))) or print DEBUGOUT "ERROR: Could not send message to $bip: $!\n";
 			close(S);
 		}
 	} else {
 #		print DEBUGOUT "sending bip for $cmd to $to\n";
 		socket(S, PF_INET, SOCK_DGRAM, getprotobyname('udp')) or die "socket: $!\n";
-		defined(send(S, $cmd, 0, sockaddr_in($bport, inet_aton($to)))) or print "could not send message: $!\n";
+		defined(send(S, $cmd, 0, sockaddr_in($bport, inet_aton($to)))) or print DEBUGOUT "ERROR: Could not send message: $!\n";
 		close(S);
 	}
 }
