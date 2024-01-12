@@ -93,7 +93,7 @@ my %commands6 = (
 $commands{6} = \%commands6;
 
 # If you are using sudo, run as this user
-my $setuid = "root";
+our $setuid = "root";
 
 #
 # Default configuration ends
