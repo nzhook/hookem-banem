@@ -409,7 +409,14 @@ sub block_ip {
 
 	# Insert the IP into the chain
 	godo("new_block", $ipv, 0, %vars);
-	cache_blocked(%vars);				# Recache since the output will now have changed
+
+	# If we already a cache then we can just update it
+	if(defined($cache{$vars{"service"}}{"block"})) {
+		$cache{$vars{"service"}}{"block"} .= "\n" . $ip;
+	} else {
+		# Else set up the cache
+		cache_blocked(%vars);
+	}
 }
 
 sub unblock_ip {
