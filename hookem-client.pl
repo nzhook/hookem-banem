@@ -64,7 +64,7 @@ our %commands = {};
 
 # The commands to execute:
 my %commands4 = (
-	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v4 hash:net family inet4; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v4 src -j DROP',
+	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v4 hash:net family inet; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v4 src -j DROP',
 	"check_service"	=> '/sbin/iptables -nL INPUT | grep -qi "hookem-INP<service>_v4"',
 	"end_service" 	=> '/sbin/iptables -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j DROP -m set --match-set hookem-INP<service>_v4; /sbin/ipset destroy hookem-INP<service>_v4',
 
@@ -80,7 +80,7 @@ $commands{4} = \%commands4;
 
 
 my %commands6 = (
-	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v6 hash:net family inet4; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v6 src -j DROP',
+	"new_service" 	=> '/sbin/ipset create hookem-INP<service>_v6 hash:net family inet6; /sbin/iptables -I INPUT 1 -m state --state NEW -p <protocol> -m multiport --dports <port> -m set --match-set hookem-INP<service>_v6 src -j DROP',
 	"check_service"	=> '/sbin/iptables -nL INPUT | grep -qi "hookem-INP<service>_v6"',
 	"end_service" 	=> '/sbin/iptables -D INPUT -m state --state NEW -p <protocol> -m multiport --dports <port> -j DROP -m set --match-set hookem-INP<service>_v6; /sbin/ipset destroy hookem-INP<service>_v6',
 
