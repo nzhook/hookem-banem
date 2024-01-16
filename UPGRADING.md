@@ -39,6 +39,7 @@ iptables -X hookem-INP\<service\>
 This can be done once the new version starts up
 
 If you would prefer to stay with the older method you can use the config file located in example_config/client_iptables.pl.conf
+
 If you used custom blocking commands you can move these into a config file
 
 ### cache_block command now has parsing
@@ -49,6 +50,7 @@ The new versions add parse_block which is a regex to extract the IP address from
 you should now add parse_block. The first substring match of the regex (part in brackets) is expected to be the IP address.
 
 Example using iptables:
+
 If the results of the **cache_block** command: **/sbin/iptables -nL hookem-INP\<service\>**
 ```
 Chain hookem-INPtestservice (1 references)
@@ -58,10 +60,11 @@ DROP       all  --  200.100.300.50       0.0.0.0/0
 DROP       all  --  10.20.30.100         0.0.0.0/0
 ```
 
-**parse_block** would be set to: **qw(DROP\s.*--\s*([0-9a-f:.]+))**
+**parse_block** would be set to: **qw(DROP\s.\*--\s\*([0-9a-f:.]+))**
+
 which matches on the following:
 ```
-\>\>DROP\<\<       all  \>\>--\<\<  (\>\>100.200.300.10\<\<)       0.0.0.0/0
+>>DROP<<       all  >>--<<  (>>100.200.300.10<<)       0.0.0.0/0
 ```
 
 NOTE: the default is now ipset which has a different output so requires a different **parse_block**
